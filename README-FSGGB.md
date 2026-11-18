@@ -22,8 +22,13 @@ Copie de travail de **Divinum Officium** pour en faire une application de ScoutH
 
 Ne rien supprimer ici avant d'avoir cette génération statique : le moteur en Perl est la référence pour comparer les résultats.
 
-## Génération statique (première version, faite)
-`scripts/generer_site.py` lance le moteur d'origine, **sans le modifier**, pour chaque jour (3 jours avant à 60 jours après aujourd'hui) et chaque heure (Matines, Laudes, Prime, Tierce, Sexte, None, Vêpres, Complies), en latin, rubriques de 1960 (« Rubrics 1960 - 1960 », bréviaire de 1962 : version retenue pour la FSSPX, à confirmer). Le HTML du moteur est nettoyé (liste blanche de balises, ni script ni formulaire) et mis en page (téléphone, clair et sombre). Sortie : `index.html`, `jours/AAAA-MM-JJ/<heure>.html`, `jours.json`, `a-propos.html` (environ une minute de calcul).
-- Essai local : `python3 scripts/generer_site.py --sortie site --avant 1 --apres 2` (perl et les modules de `cpanfile` installés).
+## Génération statique (faite)
+`scripts/generer_site.py` lance les moteurs d'origine, **sans les modifier**, pour chaque jour (3 jours avant à 60 jours après aujourd'hui) : la **messe** (`web/cgi-bin/missa/missa.pl`, missel de 1962) et les **huit heures** du bréviaire (`web/cgi-bin/horas/officium.pl` : Matines, Laudes, Prime, Tierce, Sexte, None, Vêpres, Complies), en latin, rubriques de 1960 (« Rubrics 1960 », bréviaire et missel de 1962 : version retenue pour la FSSPX, à confirmer).
+
+Le HTML du moteur est nettoyé (liste blanche de balises, ni script ni formulaire), regroupé en parties (Introït, Collecte, Évangile… ; Psaumes, Hymne, Capitule…) et mis en page dans la charte de ScoutMap, d'abord pour le téléphone : choix messe ou bréviaire, heures, jour précédent et suivant, date au choix, barre pour aller à une partie, parties repliables, « propre du jour seulement » pour la messe, taille du texte, thème clair, sombre ou automatique, couleur liturgique du jour. Aucun suivi : les réglages restent dans le navigateur.
+
+- Sortie : `index.html`, `calendrier.html`, `a-propos.html`, `jours.json`, `assets/` (CSS, JS, logo), `jours/AAAA-MM-JJ/<messe|matutinum|laudes|…>.html`.
+- Essai local : `python3 scripts/generer_site.py --sortie site --avant 1 --apres 2` (perl et les modules de `cpanfile` installés) ; 60 jours se calculent en une demi-minute, une année en moins de trois minutes.
+- Vérification du moteur : les 274 tests de l'amont passent (`prove -r -I web/cgi-bin/ t`) ; sur 404 jours, les 9 offices sont produits sans échec ; le texte de nos pages est celui du moteur, mot pour mot.
 - ScoutHub la lance à chaque déploiement (type `perl` de son `apps.txt`) et la relance chaque jour, puis publie le résultat sous `/DivinumOfficium/`. Le workflow `.github/workflows/site.yml` vérifie que la génération fonctionne (artefact de 3 jours).
-- Pas encore fait : la messe, les autres langues, le calendrier complet (ordo), les chants en notation grégorienne, la recherche, la lecture hors ligne.
+- Pas encore fait : les autres langues, les messes votives et les jours à plusieurs messes, les chants en notation grégorienne, la recherche, la lecture hors ligne.
