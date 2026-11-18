@@ -51,20 +51,27 @@
   if (jour && jour === aujourdhui()) { var hc = $('.heures a[data-h="' + heureConseillee() + '"]'); if (hc) hc.classList.add("maintenant"); }
 
   // ---------- parties ----------
-  var parties = $$("details.partie"), chips = $("#chips");
+  var parties = $$("details.partie"), chips = $("#chips"), bloque = 0;
   function ouvrir(p) { if (p && p.tagName === "DETAILS") p.open = true; }
   if (chips) chips.addEventListener("click", function (e) {
     var b = e.target.closest("button[data-p]"); if (!b) return; var p = document.getElementById(b.dataset.p); if (!p) return;
-    ouvrir(p); p.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" });
+    bloque = Date.now() + 1100; $$("button[data-p]", chips).forEach(function (x) { x.classList.toggle("on", x === b); });
+    setTimeout(espion, 1250); ouvrir(p); p.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" });
   });
-  if (parties.length && "IntersectionObserver" in window && chips) {
-    var vus = {}, io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { vus[e.target.id] = e.isIntersecting ? e.boundingClientRect.top : null; });
-      var meilleur = null, top = 1e9; Object.keys(vus).forEach(function (k) { if (vus[k] !== null && Math.abs(vus[k] - 130) < top) { top = Math.abs(vus[k] - 130); meilleur = k; } });
-      if (meilleur) $$("button[data-p]", chips).forEach(function (b) { var on = b.dataset.p === meilleur; b.classList.toggle("on", on); if (on && b.scrollIntoView) { var c = chips, bl = b.offsetLeft, w = b.offsetWidth; if (bl < c.scrollLeft || bl + w > c.scrollLeft + c.clientWidth) c.scrollLeft = bl - 16; } });
-    }, { rootMargin: "-110px 0px -55% 0px", threshold: [0, 1] });
-    parties.forEach(function (p) { io.observe(p); });
+  // la puce de la partie en cours de lecture s'allume : la dernière partie dont le haut est passé sous la barre
+  function espion() {
+    if (Date.now() < bloque || !chips) return;
+    var courante = null;
+    parties.forEach(function (p) { if (!p.hidden && p.getBoundingClientRect().top <= 150) courante = p.id; });
+    if (!courante) { var v = parties.filter(function (p) { return !p.hidden; })[0]; courante = v && v.id; }
+    $$("button[data-p]", chips).forEach(function (b) {
+      var on = b.dataset.p === courante; if (b.classList.contains("on") === on) return; b.classList.toggle("on", on);
+      if (on) { var bl = b.offsetLeft, w = b.offsetWidth; if (bl < chips.scrollLeft || bl + w > chips.scrollLeft + chips.clientWidth) chips.scrollLeft = bl - 16; }
+    });
   }
+  var attente = 0;
+  window.addEventListener("scroll", function () { if (!attente) attente = setTimeout(function () { attente = 0; espion(); }, 90); }, { passive: true });
+  setTimeout(espion, 300);
   var bo = $("#b-options"), mo = $("#menu-parties");
   if (bo && mo) bo.addEventListener("click", function () { var o = mo.hidden; mo.hidden = !o; bo.setAttribute("aria-expanded", String(o)); });
   var tout = $("#b-tout");
