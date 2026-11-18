@@ -1,0 +1,34 @@
+name: Générer le site des offices
+
+# Pré-calcule les offices (latin, rubriques de 1960) pour les jours autour d'aujourd'hui et garde le résultat comme artefact.
+# ScoutHub fait la même génération au moment de son déploiement (type « perl » dans son apps.txt) : ce workflow sert à vérifier
+# que la génération fonctionne après chaque changement, et chaque jour.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  generer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer Perl et ses modules
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq perl libcgi-pm-perl libcgi-session-perl libalgorithm-diff-perl libdate-calc-perl libtimedate-perl liburi-perl liburl-encode-perl
+      - name: Générer les pages
+        run: python3 scripts/generer_site.py --sortie site --amont "${GITHUB_SHA::7}"
+      - name: Taille du résultat
+        run: du -sh site; ls site | head
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-offices
+          path: site
+          retention-days: 3

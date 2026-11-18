@@ -18,6 +18,12 @@ Copie de travail de **Divinum Officium** pour en faire une application de ScoutH
 ## Ce qui est prévu (pas encore fait)
 1. Ne garder que les offices en latin et la version des rubriques utilisée par la FSSPX.
 2. Faire produire les offices à l'avance (génération statique du calendrier, jour par jour) pour un service sans serveur Perl.
-3. Refaire l'affichage (lisible sur téléphone, clair et sombre) et l'intégrer à ScoutHub.
+3. Affiner l’affichage et l’intégrer à ScoutHub (fait pour une première version : voir ci-dessous).
 
 Ne rien supprimer ici avant d'avoir cette génération statique : le moteur en Perl est la référence pour comparer les résultats.
+
+## Génération statique (première version, faite)
+`scripts/generer_site.py` lance le moteur d'origine, **sans le modifier**, pour chaque jour (3 jours avant à 60 jours après aujourd'hui) et chaque heure (Matines, Laudes, Prime, Tierce, Sexte, None, Vêpres, Complies), en latin, rubriques de 1960 (« Rubrics 1960 - 1960 », bréviaire de 1962 : version retenue pour la FSSPX, à confirmer). Le HTML du moteur est nettoyé (liste blanche de balises, ni script ni formulaire) et mis en page (téléphone, clair et sombre). Sortie : `index.html`, `jours/AAAA-MM-JJ/<heure>.html`, `jours.json`, `a-propos.html` (environ une minute de calcul).
+- Essai local : `python3 scripts/generer_site.py --sortie site --avant 1 --apres 2` (perl et les modules de `cpanfile` installés).
+- ScoutHub la lance à chaque déploiement (type `perl` de son `apps.txt`) et la relance chaque jour, puis publie le résultat sous `/DivinumOfficium/`. Le workflow `.github/workflows/site.yml` vérifie que la génération fonctionne (artefact de 3 jours).
+- Pas encore fait : la messe, les autres langues, le calendrier complet (ordo), les chants en notation grégorienne, la recherche, la lecture hors ligne.
