@@ -1,0 +1,7 @@
+[Rank]
+Septima die infra Octavam Nativitatis Beatæ Mariæ Virginis;;Semiduplex;;2;;vide Sancti/09-08
+
+[Rule]
+vide Sancti/09-08
+Doxology=Nat
+No secunda Vespera
