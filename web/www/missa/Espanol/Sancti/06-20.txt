@@ -1,0 +1,22 @@
+[Officium]
+S. Silverio, Papa y Mártir
+
+[Name]
+Silverio
+
+[Oratio]
+Mira con benevolencia, ¡oh Pastor eterno!, a tu grey, y por la intercesión de tu bienaventurado mártir y sumo pontífice Silverio, a quien has constituido pastor de toda la Iglesia, guárdala por siempre bajo tu protección. Por nuestro Señor.
+$Per Dominum
+
+[Secreta]
+En mérito de los dones ofrecidos, ilumina, Señor, benignamente a tu Iglesia; a fin de que en todas partes progrese la marcha de tu grey; y los pastores, gobernados por ti, se hagan gratos a tus ojos. Por nuestro Señor.
+$Per Dominum
+
+[Postcommunio]
+Te suplicamos, Señor, guíes con bondad a tu Iglesia, alimentada con los santos manjares, a fin de que, conducida bajo tu poderosa dirección, vea crecer su libertad y permanezca en la integridad de la fe. Por nuestro Señor.
+$Per Dominum
+
+[Lectio]
+Lectura de la Carta del apóstol San Judas.
+!Jud 1:17-21
+Carísimos: Acordaos de las palabras predichas por los Apóstoles de nuestro Señor Jesucristo, que os decían que en el último tiempo vendrán burladores, que andarán según sus concupiscencias en impiedades. Éstos son los que se separan a sí mismos, sensuales, que no tienen el Espíritu. Mas vosotros, carísimos, edificándoos a vosotros mismos sobre vuestra santísima fe, orando en el Espíritu Santo, guardaos a vosotros mismos en el amor de Dios, esperando la misericordia de nuestro Señor Jesucristo para la vida eterna.
