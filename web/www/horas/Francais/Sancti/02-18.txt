@@ -1,0 +1,13 @@
+[Officium]
+S. Siméon, Évêque et Martyr
+
+[Name]
+Siméon
+
+[Oratio]
+Voyez notre faiblesse, Dieu tout-puissant, et, parce que le poids de notre action propre nous accable, faites que l’intercession glorieuse du bienheureux Siméon, votre Martyr et Pontife, nous protège.
+$Per Dominum
+
+[Lectio93]
+Siméon, fils de Cléophas, fut ordonné évêque de Jérusalem après Jacques. Il fut accusé devant le consul Atticus à l’époque de l’empereur Trajan, parce qu’il était chrétien et parent du Christ. En effet, à cette époque, tous ceux qui descendaient de la lignée de David étaient arrêtés. C’est pourquoi, tourmenté par de nombreux supplices, il souffrit le même genre de passion que notre Sauveur avait subi. Tous s’étonnaient qu’un homme accablé par l’âge (il avait en effet cent vingt ans) supportât avec tant de courage et de fermeté les douleurs les plus amères de la croix.
+&teDeum
