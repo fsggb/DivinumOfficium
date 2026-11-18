@@ -1,0 +1,277 @@
+#!/usr/bin/perl
+# Checks the martyrology against the flat files it was built from.
+#
+# Those files are the martyrology as it read before it was broken into
+# elogia; they are kept in obsolete/martyrologium-source.  Run this after
+# importing a language or editing a day file.
+#
+#   Latin     must come out line for line the same under every version.
+#   Vernacular entries may now move, because the Latin index decides the
+#             order, and may be suppressed, because the Latin index decides
+#             what each version has.  What must not happen is an entry
+#             going missing under Divino Afflatu, where nothing is dropped.
+use utf8;
+use FindBin;
+use lib "$FindBin::Bin/../../web/cgi-bin";
+use DivinumOfficium::FileIO qw(do_read);
+
+binmode STDOUT, ':encoding(utf-8)';
+
+our ($datafolder, $version, $langfb);
+$datafolder = "$FindBin::Bin/../../web/www/horas";
+my $legacy = "$FindBin::Bin/../../obsolete/martyrologium-source";
+$langfb = 'English';
+
+do "$FindBin::Bin/../../web/cgi-bin/DivinumOfficium/SetupString.pl"
+  or die "failed to load SetupString.pl: " . ($@ || $!);
+do "$FindBin::Bin/../../web/cgi-bin/horas/specials/specprima.pl"
+  or die "failed to load specprima.pl: " . ($@ || $!);
+*main::checklatinfile = sub { }
+
+  unless defined &main::checklatinfile;
+
+my @dmax = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31);
+my @days;
+for my $m (1 .. 12) { push @days, sprintf('%02d-%02d', $m, $_) for 1 .. $dmax[$m - 1] }
+
+my @versions =
+  (['Divino Afflatu', ''], ['Reduced 1955', '1955R'], ['Rubrics 1960', '1960'], ['Tridentine - 1570', '1570']);
+
+# A translation's entry may belong to a recension the Latin has no flat
+# files for: the Czech book is the Cistercian martyrology, and its own
+# elogia are said only under the Cistercian versions; the English book
+# is Benedict XIV's martyrology, which the 1888 and 1906 versions say.
+my @reach = (@versions, ['Monastic Tridentinum Cisterciensis 1951'], ['Tridentine - 1888'], ['Tridentine - 1906']);
+
+#*** respelt(\@a, \@b)
+# True when two renderings differ only in where the accents fell or which
+# quotation marks were set.
+#
+# Those differences are deliberate.  The 1570 files were left with a stray
+# accent here and there in a version that prints none, and some version
+# sections carried a misprint of the base rather than a wording of their
+# own.  Both were reconciled, so the martyrology no longer reads the way
+# the flat files it was built from do.  Anything beyond spelling is a real
+# break and still fails.
+#
+# A recension that ran two elogia onto one line is held as the two entries
+# the other recensions have, so that every language keeps them apart; the
+# day then reads the same words over one line more.  The words are
+# compared over the whole day when the lines do not pair up.
+sub respelt {
+  my ($a, $b) = @_;
+  my $fold = sub {
+    my $t = deaccent(shift);
+    $t =~ s/[\x{ab}\x{bb}\x{201c}\x{201d}\x{2018}\x{2019}"',;:.!?()\-]//g;
+    $t =~ s/\s+/ /g;
+    $t =~ s/^ | $//g;
+    lc $t;
+  };
+  return $fold->(join ' ', @$a) eq $fold->(join ' ', @$b) unless @$a == @$b;
+
+  for my $i (0 .. $#$a) {
+    next if $a->[$i] eq $b->[$i];
+    return 0 unless $fold->($a->[$i]) eq $fold->($b->[$i]);
+  }
+  return 1;
+}
+
+sub deaccent {
+  my $s = shift;
+  require Unicode::Normalize;
+  $s = Unicode::Normalize::NFKD($s);
+  $s =~ s/\p{Mn}//g;
+  $s =~ s/\x{e6}/ae/g;
+  $s =~ s/\x{c6}/Ae/g;
+  $s =~ s/\x{153}/oe/g;
+  $s =~ s/\x{152}/Oe/g;
+  return $s;
+}
+
+sub norm {
+  my $l = shift;
+  $l =~ s/\s+/ /g;
+  $l =~ s/^ | $//g;
+  return $l;
+}
+
+#*** in_rubric($line, $rendered)
+# A rubric -- rise, bow, say the Ave in silence -- is printed as one,
+# /:...:/, on a line of its own after the entry it goes with.  The flat
+# file has it at the end of the entry's own line, sometimes in brackets,
+# or broken over lines of its own; it is reached all the same.
+sub in_rubric {
+  my ($line, $new) = @_;
+  my @rubrics = map { m{^/:(.*?)\.?:/$} ? $1 : () } keys %$new;
+  (my $piece = $line) =~ s/[.()]+$//;
+
+  foreach my $rubric (@rubrics) {
+    return 1 if $piece ne '' && index($rubric, $piece) >= 0;
+    my $rest = $line;
+    return 1 if $rest =~ s/\s*\(?\Q$rubric\E\.?\)?\s*$// && $new->{norm($rest)};
+  }
+  return 0;
+}
+
+#*** covered($line, $rendered)
+# Some books print two elogia as one line.  The entry is then held as the
+# two the Latin names, and the day renders them where the Latin puts them,
+# which need not be next to each other.  The wording is not lost for that:
+# the line is still there, in pieces, so it counts as reached when it can
+# be cut into pieces the day renders.
+sub covered {
+  my ($line, $rendered) = @_;
+  my @piece = sort { length($b) <=> length($a) } grep {/\S/} keys %$rendered;
+  return 0 unless @piece;
+
+  # or the other way about: the book wrapped one elogium onto two lines and
+  # the entry holds it whole, so the printed line is part of what renders
+  foreach my $p (@piece) {
+    return 1 if length($p) > length($line) && index($p, $line) >= 0;
+  }
+  my %seen;
+
+  my $walk;
+  $walk = sub {
+    my $rest = shift;
+    return 1 if $rest eq '';
+    return 0 if $seen{$rest}++;
+
+    foreach my $p (@piece) {
+      next unless $p ne $line && index($rest, $p) == 0;
+      my $tail = substr($rest, length $p);
+      $tail =~ s/^\s+//;
+      return 1 if $walk->($tail);
+    }
+    return 0;
+  };
+  return $walk->($line);
+}
+
+#*** leapish($day)
+# Whether the day reads one way in a common year and another in a leap
+# year: its index asks which the year is.  The flat files print both, the
+# way the book does, leaving the reader to omit what the year does not have.
+sub leapish {
+  my $day = shift;
+  return scalar grep {/\banno\s+(?:bissextili|communi)\b/} do_read("$datafolder/Latin/Martyrologium/$day.txt");
+}
+
+#*** in_years($code)
+# What $code returns in a common year and in a leap year, one list each.
+# The year is asked when a file is read, so what was read for the one is
+# forgotten before the other.
+sub in_years {
+  my $code = shift;
+  our ($year, %setupstring_caches_by_version);
+  my @out;
+
+  for my $y (2027, 2028) {
+    ($year, %setupstring_caches_by_version) = ($y);
+    push @out, [$code->()];
+  }
+  ($year, %setupstring_caches_by_version) = ();
+  return @out;
+}
+
+#*** both_years(\@flat, @renders)
+# True when the flat file is the renders put together: each of them reads
+# in the flat file's order, and the flat file has nothing neither of them
+# says.
+sub both_years {
+  my ($flat, @renders) = @_;
+  my %said;
+
+  foreach my $r (@renders) {
+    my $i = 0;
+    foreach my $line (@$flat) { $i++ if $i < @$r && $line eq $r->[$i] }
+    return 0 if $i < @$r;
+    $said{$_} = 1 foreach @$r;
+  }
+  return !grep { !$said{$_} } @$flat;
+}
+
+my ($fail, $checked) = (0, 0);
+
+for my $v (@versions) {
+  my ($name, $sfx) = @$v;
+  $version = $name;
+  my ($same, $spelt) = (0, 0);
+
+  for my $day (@days) {
+    my @flat = do_read("$legacy/Latin/Martyrologium$sfx/$day.txt");
+    $checked++;
+
+    if (leapish($day)) {
+      if (both_years(\@flat, in_years(sub { martyrologium_elogia('Latin', $day) }))) {
+        $same++;
+      } else {
+        $fail++;
+        print "  Latin $day under $name differs\n";
+      }
+      next;
+    }
+    my @pool = martyrologium_elogia('Latin', $day);
+
+    if (join("\0", @pool) eq join("\0", @flat)) {
+      $same++;
+    } elsif (respelt(\@pool, \@flat)) {
+      $spelt++;
+    } else {
+      $fail++;
+      print "  Latin $day under $name differs\n";
+    }
+  }
+  printf "Latin    %-18s %3d/%d identical%s\n", $name, $same, scalar(@days), $spelt ? " (+$spelt respelt)" : '';
+}
+
+# A translated entry has to be reachable under at least one version.  Not
+# under every version: the flat files predate the martyrology obeying the
+# version rules at all, so they carry entries that only later editions
+# have - Joseph the Worker is in the 1955 books and nowhere earlier, and
+# it is right that Divino Afflatu no longer shows it.  What must not
+# happen is an entry that no version can reach, which means its key does
+# not exist in the Latin index at all.
+my @langs;
+opendir(my $root, $datafolder) or die "cannot read $datafolder";
+
+for my $name (sort readdir $root) {
+  next if $name =~ /^\.|gabc|^Latin$/;
+  push @langs, $name if -d "$legacy/$name/Martyrologium";
+}
+closedir $root;
+for my $lang (@langs) {
+  my $lost = 0;
+
+  for my $day (@days) {
+    my $f = "$legacy/$lang/Martyrologium/$day.txt";
+    next unless -e $f;
+    $checked++;
+    my %new;
+
+    for my $v (@reach) {
+      $version = $v->[0];
+      my @renders =
+        leapish($day) ? in_years(sub { martyrologium_elogia($lang, $day) }) : ([martyrologium_elogia($lang, $day)]);
+      $new{norm($_)} = 1 foreach map {@$_} @renders;
+    }
+
+    for my $raw (do_read($f)) {
+      my $line = norm($raw);
+      next if $line !~ /\S/ || $line eq '_' || $new{$line};
+
+      # a heading line the renderer rewords when nothing above it is the
+      # same day it speaks of (_unsame in specprima.pl)
+      next if $new{norm(main::_unsame($raw, $lang))};
+      next if covered($line, \%new);
+      next if in_rubric($line, \%new);
+      $lost++;
+      print "  $lang $day: $line\n" if $lost <= 3;
+    }
+  }
+  printf "%-8s %-18s %3d entries no version can reach\n", $lang, '', $lost;
+  $fail += $lost;
+}
+
+printf "\n%d checks, %s\n", $checked, $fail ? "$fail PROBLEMS" : 'all clear';
+exit($fail ? 1 : 0);

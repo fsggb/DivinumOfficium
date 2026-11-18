@@ -1,0 +1,85 @@
+# --- STAGE 1: Build Info ---
+FROM alpine:3.22 AS gitinfo
+RUN apk add git
+COPY .git /build/
+WORKDIR /build
+
+RUN echo "{" > /build/buildinfo && \
+    echo "  \"build-date\": \"$(date +%s)\", " >> /build/buildinfo && \
+    echo "  \"build-date-human\": \"$(date)\", " >> /build/buildinfo && \
+    echo "  \"commit\": \"$(git rev-parse HEAD)\", " >> /build/buildinfo && \
+    echo "  \"branch\": \"$(git rev-parse --abbrev-ref HEAD)\"" >> /build/buildinfo && \
+    echo "}" >> /build/buildinfo
+
+# --- STAGE 2: Final Container ---
+FROM perl:5.40-slim AS final
+LABEL maintainer="Thomas Randall <thomas.james.randall@gmail.com>"
+
+# 1. System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dumb-init \
+    build-essential \
+    libperl-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libcgi-pm-perl \
+    libcgi-session-perl \
+    libhttp-message-perl \
+    liburi-perl \
+    libwww-perl \
+    libplack-perl \
+    perl-modules \
+    wget \
+    cron \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Plack stack from cpanfile
+COPY cpanfile /tmp/cpanfile
+RUN cpanm --notest App::cpm && \
+    cpm install -g --cpanfile /tmp/cpanfile
+
+WORKDIR /var/www
+
+# 4. Copy code and set permissions
+COPY web /var/www/web
+COPY lexicon-tools /var/www/lexicon-tools
+COPY app.psgi /var/www/app.psgi
+
+COPY warm-ordo-cache.sh /usr/local/bin/warm-ordo-cache.sh
+COPY --from=gitinfo /build/buildinfo /var/www/web/buildinfo
+
+RUN perl /var/www/lexicon-tools/build_lexicon_storable.pl
+
+RUN find /var/www/web -type d -exec chmod 755 {} + && \
+    find /var/www/web -type f -exec chmod 644 {} + && \
+    find /var/www/web/cgi-bin -type f -name "*.pl" -exec chmod +x {} + && \
+    chmod +x /usr/local/bin/warm-ordo-cache.sh && \
+    mkdir -p /var/www/web/ordo-cache && \
+    chown -R www-data:www-data /var/www
+
+# 5. Internalize URLs
+RUN grep -rl 'divinumofficium.com' /var/www/web | xargs sed -i 's|https\?://divinumofficium\.com/|/|g'
+
+# 6. Set up nightly cron job to warm the ordo cache at 2:00 AM UTC
+# Runs as www-data, logs to /var/log/ordo-cache-warm.log
+RUN echo "0 2 * * * www-data BASE_URL=http://localhost:8080 /usr/local/bin/warm-ordo-cache.sh >> /var/log/ordo-cache-warm.log 2>&1" \
+    > /etc/cron.d/ordo-cache && \
+    chmod 644 /etc/cron.d/ordo-cache
+
+# 7. Clear any debug environment that might have leaked in
+ENV PERL5OPT=""
+ENV PERL5DB=""
+ENV PERLDB_OPTS=""
+
+USER root
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Start cron, then warm the ordo cache in the background after a 15 second
+# delay to allow Starman to fully start before requests are made.
+# Cache will be ready within ~75 seconds of container startup.
+CMD ["/bin/bash", "-c", \
+    "cron && \
+     (sleep 15 && BASE_URL=http://localhost:8080 /usr/local/bin/warm-ordo-cache.sh >> /var/log/ordo-cache-warm.log 2>&1) & \
+     starman --port 8080 --host 0.0.0.0 --workers 20 --preload-app --user www-data --group www-data /var/www/app.psgi"]
