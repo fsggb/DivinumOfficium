@@ -1,6 +1,6 @@
 # DivinumOfficium (FSGGB)
 
-Copie de travail de **Divinum Officium** pour en faire une application de ScoutHub : la messe et les huit heures du bréviaire en latin (version utilisée par la Fraternité Saint-Pie X : rubriques de 1960, missel et bréviaire de 1962), avec traduction française de la messe, lisibles surtout sur téléphone, installables et utilisables sans connexion.
+Copie de travail de **Divinum Officium** pour en faire une application de ScoutHub : la messe et les huit heures du bréviaire en latin (version utilisée par la Fraternité Saint-Pie X : rubriques de 1960, missel et bréviaire de 1962), avec traduction française des textes propres de la messe, lisibles surtout sur téléphone, installables et utilisables sans connexion.
 
 ## Origine
 - Dépôt d'origine : https://github.com/DivinumOfficium/divinum-officium (licence MIT, voir `LICENSE`).
@@ -14,7 +14,7 @@ Copie de travail de **Divinum Officium** pour en faire une application de ScoutH
 
 ## L'application (`scripts/generer_site.py`)
 Le script lance les moteurs d'origine, sans les modifier, pour chaque jour (3 jours avant à 60 jours après aujourd'hui) :
-- la **messe** avec sa **traduction française** (`lang2=Francais`, une seule passe), les **autres messes** des jours qui en comptent plusieurs (Noël : nuit, aurore, jour ; Défunts ; Quatre-Temps : forme longue ou brève) ;
+- la **messe**, avec une **traduction française des seuls textes variables** (Introït, Collecte, Épître, Graduel/Trait, Évangile, Offertoire, Secrète, Communion, Postcommunion ; ni Kyrie, ni Gloria, ni Credo, ni Préface, ni Canon ; `lang2=Francais`, une seule passe), les **autres messes** des jours qui en comptent plusieurs (Noël : nuit, aurore, jour ; Défunts ; Quatre-Temps : forme longue ou brève) ;
 - les **communs des saints, la messe des défunts, les fêtes de la Sainte Vierge et les messes votives** (liste lue dans `web/www/missa/missa.dialog`, rubrique `[votives]`), pour les 7 jours à partir d'aujourd'hui (`--votives`) ;
 - les **huit heures** du bréviaire (Matines, Laudes, Prime, Tierce, Sexte, None, Vêpres, Complies).
 
@@ -22,9 +22,9 @@ Le HTML du moteur est nettoyé (liste blanche de balises, ni script ni formulair
 
 ### Ce que fait l'interface
 - **Accueil** : recherche en français courant (« vêpres demain », « évangile », « Toussaint », « 8 décembre »), faite sur l'appareil donc aussi hors connexion ; rubrique *Messe* et rubrique *Office divin* ; l'heure la plus proche de l'**heure locale de l'appareil** est mise en avant (« Recommandé maintenant ») ; calendrier ; prochaines grandes fêtes ; installation.
-- **Pages de lecture** : pas de rangée d'onglets (le bouton *Accueil* est toujours là), date précédente/suivante en haut, parties repliables. **Ordinateur** : sommaire latéral (onglets verticaux). **Téléphone** : barre collante (partie en cours, flèches, liste complète dans une feuille). Messe : *propre du jour seulement*, langue *Latin / Les deux / Français* par partie ou globale, *Autres messes*.
+- **Pages de lecture** : pas de rangée d'onglets (le bouton *Accueil* est toujours là), date précédente/suivante en haut, parties repliables. **Ordinateur** : sommaire latéral (onglets verticaux). **Téléphone** : barre collante (partie en cours, flèches, liste complète dans une feuille). Messe : *propre du jour seulement*, langue *Latin / Les deux / Français* partie par partie (pas de traduction globale), *Autres messes*.
 - **Calendrier** : filtres comme dans un missel (grandes fêtes, dimanches, féries, temps liturgiques) et recherche.
-- **Réglages** (partout) : taille du texte, thème (clair, sombre, automatique), langue de la messe, écran allumé, hors connexion, installation.
+- **Réglages** (partout) : taille du texte, thème (clair, sombre, automatique), écran allumé, hors connexion, installation.
 - **Application installable** (`manifest.webmanifest`, icônes) et **lecture hors connexion** (`sw.js` : le noyau de l'application est gardé à chaque version ; les pages lues ou téléchargées sont gardées d'une version à l'autre ; réseau d'abord, cache en secours).
 - **Couleurs** : chaque paire texte/fond est définie par des variables vérifiées dans les deux thèmes (contraste d'au moins 4,5 : 1) ; aucune donnée n'est envoyée.
 
@@ -35,4 +35,4 @@ Le HTML du moteur est nettoyé (liste blanche de balises, ni script ni formulair
 ## Utilisation
 - Essai local : `python3 scripts/generer_site.py --sortie site --avant 1 --apres 2` (perl et les modules de `cpanfile` installés). 60 jours et les messes votives se calculent en une demi-minute (environ 40 Mo).
 - ScoutHub la lance à chaque déploiement (type `perl` de son `apps.txt`) et la relance chaque jour, puis publie le résultat sous `/DivinumOfficium/`. Le workflow `.github/workflows/site.yml` vérifie que la génération fonctionne (artefact de 3 jours).
-- Pas encore fait : autres langues (hors traduction française de la messe), traduction du bréviaire, chants grégoriens notés, messes votives au-delà de 7 jours.
+- Pas encore fait : autres langues (hors traduction française des textes propres de la messe), traduction du bréviaire, chants grégoriens notés, messes votives au-delà de 7 jours.

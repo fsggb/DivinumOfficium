@@ -28,10 +28,6 @@
   $("#t-moins") && $("#t-moins").addEventListener("click", function () { taille(parseInt(LS.get("do.taille") || "2", 10) - 1); });
   $("#t-plus") && $("#t-plus").addEventListener("click", function () { taille(parseInt(LS.get("do.taille") || "2", 10) + 1); });
   $$("[data-theme-btn]").forEach(function (b) { b.addEventListener("click", function () { theme(b.dataset.themeBtn); }); });
-  function langueDefaut() { return LS.get("do.langue") || "la"; }
-  function majLangueDefaut() { $$("[data-lg-def]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lgDef === langueDefaut())); }); }
-  $$("[data-lg-def]").forEach(function (b) { b.addEventListener("click", function () { LS.set("do.langue", b.dataset.lgDef); majLangueDefaut(); appliquerLangue(b.dataset.lgDef); }); });
-  majLangueDefaut();
 
   // fenêtres
   function ouvrirDialogue(d) { if (!d) return; if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute("open", ""); }
@@ -152,13 +148,10 @@
   function majPropre(on) { $$('details.partie[data-ord="1"]').forEach(function (p) { p.hidden = on; }); $$('[data-p][data-ord="1"]').forEach(function (b) { b.hidden = on; }); $$("[data-propre]").forEach(function (c) { c.checked = on; }); LS.set("do.propre", on ? "1" : "0"); if (!on) return; var v = visibles()[0]; if (v && courante && document.getElementById(courante).hidden) marquer(v.id); }
   $$("[data-propre]").forEach(function (c) { c.addEventListener("change", function () { majPropre(c.checked); }); });
   if ($("[data-propre]")) majPropre(LS.get("do.propre") === "1");
-  // langue : latin, français, les deux (messe)
-  function appliquerLangue(lg) { parties.forEach(function (p) { if ($(".fr", p)) p.setAttribute("data-lg", lg); }); $$("[data-lg-glob]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lgGlob === lg)); }); var c = $("#cycle-lg"); if (c) c.textContent = lg === "fr" ? "FR" : lg === "deux" ? "LA+FR" : "LA"; majLangueParties(); }
+  // langue : latin, français ou les deux, partie par partie (seulement les textes variables d'un jour à l'autre)
+  majLangueParties();
   function majLangueParties() { parties.forEach(function (p) { var lg = p.getAttribute("data-lg"); $$(".lang button", p).forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.lg === lg)); }); }); }
-  $$("[data-lg-glob]").forEach(function (b) { b.addEventListener("click", function () { LS.set("do.langue", b.dataset.lgGlob); appliquerLangue(b.dataset.lgGlob); majLangueDefaut(); }); });
-  $("#cycle-lg") && $("#cycle-lg").addEventListener("click", function () { var o = ["la", "fr", "deux"], lg = o[(o.indexOf(langueDefaut()) + 1) % 3]; LS.set("do.langue", lg); appliquerLangue(lg); majLangueDefaut(); });
   $$(".lang button").forEach(function (b) { b.addEventListener("click", function (e) { e.stopPropagation(); var p = b.closest("details.partie"); p.setAttribute("data-lg", b.dataset.lg); majLangueParties(); }); });
-  if (parties.some(function (p) { return $(".fr", p); })) appliquerLangue(langueDefaut());
   // hash : ouvrir la partie demandée
   if (location.hash && document.getElementById(location.hash.slice(1))) setTimeout(function () { aller(location.hash.slice(1)); }, 350);
 

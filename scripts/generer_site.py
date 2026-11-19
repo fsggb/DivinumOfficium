@@ -55,6 +55,9 @@ FR = {
     "Antiphona finalis B.M.V.": "Antienne mariale", "Preces": "Prières", "Commemoratio": "Mémoire", "Martyrologium": "Martyrologe",
     "Capitulum Responsorium Versus": "Capitule, répons, verset", "Oratio Dominica": "Notre Père", "Te Deum": "Te Deum",
 }
+# Seuls ces textes (variables d'un jour à l'autre) ont une traduction française : ni Kyrie, ni Gloria, ni Credo, ni Préface, ni Canon.
+TRADUISIBLES = {"Introitus", "Oratio", "Lectio", "Graduale", "Tractus", "Alleluia", "Sequentia", "Evangelium", "Offertorium", "Secreta",
+                "Communio", "Postcommunio", "Commemoratio"}
 PROPRE = {"Introitus", "Oratio", "Lectio", "Graduale", "Tractus", "Alleluia", "Sequentia", "Evangelium", "Offertorium", "Secreta",
           "Præfatio", "Prefatio", "Communio", "Postcommunio", "Commemoratio"}
 # Libellés français des communs et des messes votives du moteur (code → groupe, libellé, mots pour la recherche)
@@ -353,8 +356,6 @@ def dialogue_reglages(racine):
     return ('<dialog class="feuille" id="d-reglages" aria-labelledby="t-reglages"><div class="tete"><h2 id="t-reglages">Réglages</h2><button type="button" data-fermer aria-label="Fermer">×</button></div><div class="contenu">'
             '<div><h3>Taille du texte</h3><div class="seg"><button type="button" id="t-moins" aria-label="Plus petit">A−</button><button type="button" id="t-etat" disabled>19 px</button><button type="button" id="t-plus" aria-label="Plus grand">A+</button></div></div>'
             '<div><h3>Thème</h3><div class="seg"><button type="button" data-theme-btn="auto">Auto</button><button type="button" data-theme-btn="light">Clair</button><button type="button" data-theme-btn="dark">Sombre</button></div></div>'
-            '<div><h3>Messe : texte propre du jour</h3><div class="seg"><button type="button" data-lg-def="la">Latin</button><button type="button" data-lg-def="deux">Les deux</button><button type="button" data-lg-def="fr">Français</button></div>'
-            '<p class="etat">Épître, Évangile, Introït, etc. Chaque partie peut aussi être changée à part, sur la page de la messe.</p></div>'
             '<label class="sw"><input type="checkbox" id="s-ecran"><span>Garder l’écran allumé pendant la lecture<small>Évite la mise en veille du téléphone</small></span></label>'
             '<div><h3>Hors connexion</h3><p class="etat" id="hc-etat"></p><div class="barre-prog" id="hc-barre" hidden><i></i></div><div class="grp" style="margin-top:8px">'
             '<button type="button" class="btn" id="hc-7">Télécharger aujourd’hui et la semaine</button><button type="button" class="btn" id="hc-tout">Télécharger tous les jours préparés</button><button type="button" class="btn" id="hc-eff">Effacer les pages enregistrées</button></div></div>'
@@ -377,7 +378,9 @@ def page_lecture(j, off, titre_jour, ecriture, parties, dispo, couleur, build, a
     racine = "../.."
     slug, genre = off["slug"], off["genre"]
     est_messe = genre == "messe"
-    a_fr = est_messe and any(p["fr"] for p in parties)
+    for p in parties:                      # la traduction n'est gardée que pour les textes variables
+        if p["titre"] not in TRADUISIBLES and not p["titre"].startswith("Commemoratio"):
+            p["fr"] = ""
     ids, vus = [], {}
     for p in parties:
         base = slug_ascii(p["titre"] or "debut")
@@ -410,8 +413,6 @@ def page_lecture(j, off, titre_jour, ecriture, parties, dispo, couleur, build, a
                 '<a href="%s.html"%s>%s</a>' % (m["slug"], ' aria-current="true"' if m["slug"] == slug else "", html.escape(m["label"])) for m in autres))
         if any(s.startswith("votive-") for s in dispo) or slug.startswith("votive-"):
             outils.append('<button type="button" class="btn" data-ouvre="d-messes">%s Autres messes</button>' % ico("liste"))
-        if a_fr:
-            outils.append('<div class="seg" role="group" aria-label="Langue du texte"><button type="button" data-lg-glob="la">Latin</button><button type="button" data-lg-glob="deux">Les deux</button><button type="button" data-lg-glob="fr">Français</button></div>')
         outils.append("</div>")
         haut.append("".join(outils))
     haut.append("</div></div>")
@@ -427,7 +428,7 @@ def page_lecture(j, off, titre_jour, ecriture, parties, dispo, couleur, build, a
     barre_p = ('<div class="barre-parties"><div class="in"><button type="button" class="nav" id="p-prec" aria-label="Partie précédente">%s</button>'
                '<button type="button" class="cur" id="cur" data-ouvre="d-parties" aria-label="Choisir une partie"></button>'
                '<button type="button" class="nav" id="p-suiv" aria-label="Partie suivante">%s</button>%s</div></div>'
-               % (ico("gauche"), ico("droite"), '<button type="button" class="nav la-fr" id="cycle-lg" aria-label="Langue : latin, français, les deux" style="width:auto;padding:0 12px;font-weight:700;color:var(--accent)">LA</button>' if a_fr else ""))
+               % (ico("gauche"), ico("droite"), ""))
     # ----- parties -----
     cartes = []
     for n, p in enumerate(parties):
@@ -452,7 +453,7 @@ def page_lecture(j, off, titre_jour, ecriture, parties, dispo, couleur, build, a
     # feuille des parties (téléphone) et des autres messes
     h.append('<dialog class="feuille" id="d-parties" aria-labelledby="t-parties"><div class="tete"><h2 id="t-parties">Parties</h2><button type="button" data-fermer aria-label="Fermer">×</button></div><div class="contenu">'
              '<div class="liste-parties" id="liste-feuille"></div><div class="grp">%s%s</div>%s</div></dialog>'
-             % (reglages, "", '<div><h3>Langue du texte</h3><div class="seg"><button type="button" data-lg-glob="la">Latin</button><button type="button" data-lg-glob="deux">Les deux</button><button type="button" data-lg-glob="fr">Français</button></div></div>' if a_fr else ""))
+             % (reglages, "", ""))
     if est_messe:
         h.append('<dialog class="feuille" id="d-messes" aria-labelledby="t-messes"><div class="tete"><h2 id="t-messes">Autres messes</h2><button type="button" data-fermer aria-label="Fermer">×</button></div><div class="contenu"></div></dialog>')
     h.append(dialogue_reglages(racine))
